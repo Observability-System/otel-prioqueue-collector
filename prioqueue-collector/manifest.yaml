@@ -1,0 +1,23 @@
+dist:
+  name: prioqueue-collector
+  description: Custom OpenTelemetry Collector with weighted queue processor
+  output_path: ./build
+  version: 0.1.0
+
+receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.142.0
+
+processors:
+  - gomod: github.com/alexandrosst/weightedqueueprocessor v0.0.0
+    # path: /Users/alexandrosst/data-collection-orchestration/otel-custom/weightedqueueprocessor
+    path: ../weightedqueueprocessor
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.142.0
+
+extensions:
+  - gomod: github.com/alexandrosst/weightupdateextension v0.0.0
+    # path: /Users/alexandrosst/data-collection-orchestration/otel-custom/weightupdateextension
+    path: ../weightupdateextension
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.142.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.142.0

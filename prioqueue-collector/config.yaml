@@ -1,0 +1,40 @@
+extensions:
+  weightupdate:
+    port: 4500  # API port
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  weightedqueue:
+    source_attribute: "source.id"          # Attribute name to determine source (e.g., on resource)
+    initial_weights:                       # Optional initial weights
+      src1: 0.6
+      src2: 0.3
+      src3: 0.1
+    poll_interval_ms: 200                  # How often to check queues and forward (ms)
+    max_total_capacity: 8                  # Max total items in all queues
+
+  batch:                                   # Always good to batch before exporting
+    send_batch_size: 1000
+    timeout: 10s
+
+exporters:
+  debug:                                   # Prints telemetry to console (good for testing)
+    verbosity: detailed                    # detailed | normal | basic
+    sampling_initial: 5                    # Print first 5 items
+    sampling_thereafter: 200               # Then every 200th
+
+service:
+  extensions: [weightupdate]
+
+  pipelines:
+    metrics:                               # main pipeline (metrics)
+      receivers: [otlp]
+      processors: [weightedqueue, batch]
+      exporters: [debug]
