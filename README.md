@@ -236,9 +236,14 @@ otel-custom/
     go install go.opentelemetry.io/collector/cmd/builder@latest
     ```
 
-## Building the Custom Collector
-The project includes a Makefile that handles compilation, artifact organization, and release output.
+## Development Workflow (Makefile Overview)
+This project includes a Makefile that provides convenient commands for building the collector, organizing artifacts, running Docker workflows, and producing release outputs. To list all available commands:
 
+```bash
+make help
+```
+
+## Compile the Collector (Build Instructions)
 To build the collector binary:
 
 ```bash
@@ -252,7 +257,7 @@ For a full release workflow (binary + checksum + summary):
 make release
 ```
 
-## Running the Custom Collector
+## Run the Collector (Local Execution)
 Run the collector using the provided configuration (or your own):
 
 ```bash
@@ -263,7 +268,7 @@ By default:
 - OTLP receivers listen on ports 4317 (gRPC) and 4318 (HTTP)
 - the weight update API listens on port 4500
 
-## Docker Support
+## Container Images (Docker Build & Run)
 You can build and run the collector using Docker directly or via the Makefile.
 
 #### Build the image (local architecture)
