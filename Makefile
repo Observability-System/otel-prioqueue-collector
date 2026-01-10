@@ -53,10 +53,10 @@ docker-push:
 
 .PHONY: docker-buildx
 docker-buildx:
-    docker buildx build --platform linux/amd64,linux/arm64 \
+	docker buildx build --platform linux/amd64,linux/arm64 \
 		-t $(IMAGE_NAME):$(TAG) -f Dockerfile .
 
 .PHONY: docker-pushx
 docker-pushx:
-    docker buildx build --platform linux/amd64,linux/arm64 \
+	docker buildx build --platform linux/amd64,linux/arm64 \
 		-t $(REGISTRY):$(TAG) -f Dockerfile . --push
