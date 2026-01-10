@@ -268,6 +268,22 @@ By default:
 - OTLP receivers listen on ports 4317 (gRPC) and 4318 (HTTP)
 - the weight update API listens on port 4500
 
+## Test Telemetry Script (Optional)
+The repository includes a small helper script, `test-telemetry.py`, which generates synthetic metrics and sends them to the collector. It’s useful for quick local testing and for demonstrating how to set the `source.id` resource attribute in emitted metric batches.
+
+#### Requirements
+Install the minimal OpenTelemetry Python dependencies:
+```bash
+pip3 install -r requirements.txt
+```
+
+#### Running the script
+```bash 
+python3 test-telemetry.py
+```
+The script produces a steady stream of metrics tagged with a configurable `source.id`,
+allowing you to validate queueing behavior, weight updates, and end‑to‑end ingestion.
+
 ## Container Images (Docker Build & Run)
 You can build and run the collector using Docker directly or via the Makefile.
 
