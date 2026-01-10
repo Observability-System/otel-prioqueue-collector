@@ -303,32 +303,52 @@ docker run --rm \
 ```
 
 ### API Usage
-- Retrieve current weights:
+The `weightupdateextension` exposes a lightweight HTTP control‑plane for managing per‑source weights at runtime.
+#### Endpoints
+| Endpoint            | Method | Description                                                             |
+|---------------------|--------|-------------------------------------------------------------------------|
+| `/update_weights`   | POST   | Updates tenant weights using a JSON payload. Weights should sum to ~1.0 |
+| `/weights`          | GET    | Returns the current weight map and number of sources.                   |
+| `/delete_source`    | POST   | Removes a source and rebalances remaining weights equally.              |
 
-    ```bash
-    curl http://localhost:4500/weights
-    ```
+#### Examples
+##### Update Weights
+```bash
+curl -X POST http://localhost:4500/update_weights \
+  -H "Content-Type: application/json" \
+  -d '{
+        "weights": {
+          "src1": 0.7,
+          "src2": 0.2,
+          "src3": 0.1
+        }
+      }'
+```
 
-    Example response:
+##### Get Current Weights
+```bash
+curl http://localhost:4500/weights
+``` 
+Example response:
 
-    ```json
-    {
-    "weights": {
-        "src1": 0.6,
-        "src2": 0.3,
-        "src3": 0.1
-    },
-    "num_sources": 3
-    }
-    ```
+```json
+{
+"weights": {
+    "src1": 0.6,
+    "src2": 0.3,
+    "src3": 0.1
+},
+"num_sources": 3
+}
+```
 
-- Update weights:
+##### Delete a Source
+```bash
+curl -X POST http://localhost:4500/delete_source \
+  -H "Content-Type: application/json" \
+  -d '{"source": "src1"}'
+```
 
-    ```bash
-    curl -X POST http://localhost:4500/update_weights \
-    -H "Content-Type: application/json" \
-    -d '{"weights": {"src1": 0.7, "src2": 0.2, "src3": 0.1}}'
-    ```
 
 ## Customization
 | Setting            | Path in `config.yaml`                                         | Description                                   |

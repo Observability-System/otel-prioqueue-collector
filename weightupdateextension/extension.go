@@ -29,6 +29,7 @@ func (e *extensionImpl) Start(ctx context.Context, _ component.Host) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/update_weights", e.handleUpdateWeights)
 	mux.HandleFunc("/weights", e.handleGetWeights)
+	mux.HandleFunc("/delete_source", e.handleDeleteSource)
 
 	e.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", e.config.Port),
