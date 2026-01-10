@@ -22,7 +22,8 @@ help:
 	@echo "  $(GREEN)release$(RESET)          Build + checksum"
 	@echo "  $(GREEN)docker-build$(RESET)     Build docker image locally"
 	@echo "  $(GREEN)docker-buildx$(RESET)    Build multi-arch image (amd64, arm64)"
-	@echo "  $(GREEN)docker-push$(RESET)      Build and push multi-arch image"
+	@echo "  $(GREEN)docker-push$(RESET)      Push local image to registry"
+	@echo "  $(GREEN)docker-pushx$(RESET)     Build and push multi-arch image"
 	@echo ""
 
 .PHONY: build-bin
