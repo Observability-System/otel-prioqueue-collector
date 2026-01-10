@@ -224,6 +224,9 @@ otel-custom/
 │   ├── factory.go                   # OTEL factory registration
 │   └── go.mod
 │
+├── test-telemetry.py                # Optional helper script for generating synthetic metrics
+├── requirements.txt                 # Python dependencies for the test telemetry script
+│
 ├── Makefile                         # Build, release, multi-arch Docker, and tooling commands
 ├── Dockerfile
 └── README.md                        # Documentation for building and running the custom collector
