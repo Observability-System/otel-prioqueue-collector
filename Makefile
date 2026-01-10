@@ -32,7 +32,7 @@ build-bin:
 
 .PHONY: checksum
 checksum: build-bin
-    sha256sum $(BIN_OUT) > $(COLLECTOR_DIR)/build/checksums.txt
+	sha256sum $(BIN_OUT) > $(COLLECTOR_DIR)/build/checksums.txt
 	@echo "$(GREEN)Checksum written to $(YELLOW)prioqueue-collector/build/checksums.txt$(RESET)"
 	@cat $(COLLECTOR_DIR)/build/checksums.txt
 
