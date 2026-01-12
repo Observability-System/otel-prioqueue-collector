@@ -156,7 +156,7 @@ The processor is designed for **availability-first behavior** under overload:
 
 The processor exposes Prometheus-style metrics, including:
 
-- ``weightedqueue_queue_length{source="..."}`` (gauge) 
+- ``weightedqueue_queue_length{source="..."}`` (gauge)  
   Current queue length per tenant. High values indicate backlog/starvation risk for that source.
 
 - ``weightedqueue_dropped_batches{source="..."}`` (counter)  
