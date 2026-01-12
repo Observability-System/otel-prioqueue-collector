@@ -53,14 +53,14 @@ func createMetricsProcessor(
 	meter := set.TelemetrySettings.MeterProvider.Meter("weightedqueueprocessor")
 
 	droppedBatches, _ := meter.Int64Counter(
-		"weightedqueue.dropped_batches",
+		"weightedqueue_dropped_batches",
 		metric.WithDescription("Total dropped batches due to capacity"),
 		metric.WithUnit("1"),
 	)
 	p.droppedBatchesCounter = droppedBatches
 
 	queueLength, _ := meter.Int64ObservableGauge(
-		"weightedqueue.queue_length",
+		"weightedqueue_queue_length",
 		metric.WithDescription("Current queue length per source"),
 		metric.WithUnit("1"),
 	)

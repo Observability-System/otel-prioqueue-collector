@@ -156,16 +156,18 @@ The processor is designed for **availability-first behavior** under overload:
 
 The processor exposes Prometheus-style metrics, including:
 
-- ``weightedqueue_queue_length{source="..."}``  
-  Current queue length per tenant
+- ``weightedqueue_queue_length{source="..."}`` (gauge) 
+  Current queue length per tenant. High values indicate backlog/starvation risk for that source.
 
-- ``weightedqueue_dropped_batches``  
-  Total number of dropped metric batches
+- ``weightedqueue_dropped_batches{source="..."}`` (counter)  
+  Cumulative number of dropped metric batches per tenant due to capacity limits. A non-zero value signals actual data loss.
 
-These metrics enable operators and experiments to:
-- observe **per-tenant pressure**
-- study **fairness and starvation effects**
-- evaluate **SLO compliance under load**
+These metrics enable:
+- **Per-tenant visibility** — identify which sources experience pressure or starvation.
+- **Fairness & priority analysis** — compare queue lengths/drops across different weights.
+- **SLO compliance monitoring** — track drops (data loss) and backlog (latency risk) under varying loads.
+- **Adaptive control** — detect violations (e.g., high drops for a critical source) and trigger API weight updates in real-time.
+- **Overload experiments** — quantify how the system sheds load gracefully instead of failing.
 
 ## Flow Diagram
 The following diagram illustrates the runtime flow of metric batches through the collector and the interaction between the processor and the control extension:
@@ -373,6 +375,32 @@ curl -X POST http://localhost:4500/delete_source \
   -d '{"source": "src1"}'
 ```
 
+### **Accessing Internal Metrics**
+Internal Collector metrics are exposed on port `8888`. You can view these metrics directly or configure Prometheus to scrape them.
+
+- **Raw metrics:**
+
+  ```bash
+  curl http://localhost:8888/metrics
+  ```
+
+  If the Collector is running inside Kubernetes, port‑forward the metrics port:
+
+  ```bash
+  kubectl port-forward svc/<collector-service> 8888:8888
+  ```
+
+- **Prometheus scrape:** 
+
+  Add a scrape job that targets the Collector’s internal telemetry endpoint:
+
+  ```yaml
+  scrape_configs:
+    - job_name: 'otel_internal'
+      static_configs:
+        - targets: ['<collector-host>:8888']
+  ```
+  Replace `<collector-host>` with the appropriate Service name or pod IP for your environment.
 
 ## Customization
 | Setting            | Path in `config.yaml`                                         | Description                                   |
