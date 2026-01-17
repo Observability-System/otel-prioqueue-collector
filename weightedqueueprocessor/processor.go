@@ -69,15 +69,16 @@ func (q *dynamicQueue) close() {
 }
 
 type weightedQueueProcessor struct {
-	config                *Config
-	nextConsumer          consumer.Metrics
-	logger                *zap.Logger
-	shutdownCh            chan struct{}
-	wg                    sync.WaitGroup
-	queues                sync.Map                    // map[string]*dynamicQueue
-	totalEnqueued         atomic.Int64                // Total batches across queues
-	droppedBatchesCounter metric.Int64Counter         // New: total drops
-	queueLengthGauge      metric.Int64ObservableGauge // New: per-source length
+	config                  *Config
+	nextConsumer            consumer.Metrics
+	logger                  *zap.Logger
+	shutdownCh              chan struct{}
+	wg                      sync.WaitGroup
+	queues                  sync.Map                    // map[string]*dynamicQueue
+	totalEnqueued           atomic.Int64                // Total batches across queues
+	droppedBatchesCounter   metric.Int64Counter         // total drops
+	queueLengthGauge        metric.Int64ObservableGauge // per-source length
+	forwardedBatchesCounter metric.Int64Counter         // total forwarded
 }
 
 func (p *weightedQueueProcessor) Capabilities() consumer.Capabilities {
@@ -259,6 +260,9 @@ func (p *weightedQueueProcessor) dequeueLoop() {
 				p.logger.Error("Failed to forward batch", zap.Error(err))
 			} else {
 				p.totalEnqueued.Add(-1)
+				p.forwardedBatchesCounter.Add(context.Background(), 1,
+					metric.WithAttributes(attribute.String("source", source)),
+				)
 			}
 		}
 	}

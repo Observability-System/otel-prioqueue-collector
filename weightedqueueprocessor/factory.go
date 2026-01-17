@@ -2,6 +2,7 @@ package weightedqueueprocessor
 
 import (
 	"context"
+	"fmt"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -52,22 +53,38 @@ func createMetricsProcessor(
 	// Create initial gauges/counters (for metrics exposure)
 	meter := set.TelemetrySettings.MeterProvider.Meter("weightedqueueprocessor")
 
-	droppedBatches, _ := meter.Int64Counter(
-		"weightedqueue_dropped_batches",
+	forwardedBatches, err := meter.Int64Counter(
+		"weightedqueue_forwarded_batches_total",
+		metric.WithDescription("Total number of metric batches successfully forwarded from each source queue"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create forwarded batches counter: %w", err)
+	}
+	p.forwardedBatchesCounter = forwardedBatches
+
+	droppedBatches, err := meter.Int64Counter(
+		"weightedqueue_dropped_batches_total",
 		metric.WithDescription("Total dropped batches due to capacity"),
 		metric.WithUnit("1"),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dropped batches counter: %w", err)
+	}
 	p.droppedBatchesCounter = droppedBatches
 
-	queueLength, _ := meter.Int64ObservableGauge(
+	queueLength, err := meter.Int64ObservableGauge(
 		"weightedqueue_queue_length",
 		metric.WithDescription("Current queue length per source"),
 		metric.WithUnit("1"),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create queue length gauge: %w", err)
+	}
 	p.queueLengthGauge = queueLength
 
 	// Register observable callback
-	_, _ = meter.RegisterCallback(
+	_, err = meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {
 			p.queues.Range(func(key, value any) bool {
 				source := key.(string)
@@ -81,6 +98,9 @@ func createMetricsProcessor(
 		},
 		queueLength,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register queue length callback: %w", err)
+	}
 
 	return p, nil
 }
