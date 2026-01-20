@@ -208,7 +208,7 @@ This component is designed for:
 
 ## Project Structure
 ```
-otel-custom/
+otel-prioqueue-collector/
 ├── prioqueue-collector/
 │   ├── manifest.yaml                # OCB manifest: defines modules, versions, and build output
 │   └── config.yaml                  # Collector runtime config (receivers, processors, exporters)
