@@ -58,7 +58,7 @@ docker-buildx:
 
 .PHONY: docker-pushx
 docker-pushx:
-    docker buildx build --platform linux/amd64,linux/arm64 \
+	docker buildx build --platform linux/amd64,linux/arm64 \
 		-t $(REGISTRY):latest \
         -t $(REGISTRY):$(TAG) \
         -f Dockerfile . --push
