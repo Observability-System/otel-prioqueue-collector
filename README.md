@@ -1,9 +1,10 @@
-# **Custom OpenTelemetry Collector**: **Weighted Queue Processor**
+# **Custom OpenTelemetry Collector for Priority-Aware and Freshness-Driven Telemetry**
 
 <p align="center"> <a href="https://github.com/open-telemetry/opentelemetry-collector"> <img src="https://img.shields.io/badge/OpenTelemetry-Collector-black?style=flat-square" /> </a> <a href="#weightedqueueprocessor"> <img src="https://img.shields.io/badge/Processor-WeightedQueue-black?style=flat-square" /> </a> <a href="#freshnessexporter"><img src="https://img.shields.io/badge/Exporter-Freshness-black?style=flat-square" /></a> <a href="#weightupdateextension"> <img src="https://img.shields.io/badge/Extension-WeightUpdate-black?style=flat-square" /> </a> <a href="https://go.dev/dl/"> <img src="https://img.shields.io/badge/Go-1.25+-black?style=flat-square" /> </a> <a href="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/tag/v0.142.0"> <img src="https://img.shields.io/badge/OCB-v0.142.0-black?style=flat-square" /> </a> <img src="https://img.shields.io/badge/Feature-Stateful%20Processor-black?style=flat-square" /> <img src="https://img.shields.io/badge/Feature-Per--Source%20Queues-black?style=flat-square" /> <img src="https://img.shields.io/badge/Feature-Dynamic%20Weights-black?style=flat-square" /> <img src="https://img.shields.io/badge/API-HTTP%204500-black?style=flat-square" /> </p>
 
-This project provides a **custom OpenTelemetry Collector distribution** that introduces 
-a **stateful**, **weighted, per-tenant queueing processor** for **metrics**, a **freshness-aware metrics exporter**, together with a lightweight **HTTP control extension**.
+This project provides a **custom OpenTelemetry Collector distribution** designed for **priority-aware** and **freshness-driven telemetry handling** in **multi-tenant environments**.
+
+It introduces a **stateful, weighted per-tenant queueing processor**, a **freshness-aware metrics exporter** for SLO evaluation, and a lightweight **HTTP control extension** for safe runtime adaptation.
 
 The purpose of this collector is to enable **priority-aware** and **SLO-driven telemetry forwarding** in **multi-tenant observability pipelines**, where multiple independent sources share a common collector and backend.
 
