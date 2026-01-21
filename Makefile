@@ -9,7 +9,7 @@ BIN_OUT       := $(COLLECTOR_DIR)/build/$(BIN_NAME)
 
 IMAGE_NAME    := prioqueue-collector
 REGISTRY      := ghcr.io/observability-system/otel-prioqueue-collector
-TAG           := latest
+TAG           := v0.2.0
 
 .DEFAULT_GOAL := help
 
@@ -58,5 +58,7 @@ docker-buildx:
 
 .PHONY: docker-pushx
 docker-pushx:
-	docker buildx build --platform linux/amd64,linux/arm64 \
-		-t $(REGISTRY):$(TAG) -f Dockerfile . --push
+    docker buildx build --platform linux/amd64,linux/arm64 \
+		-t $(REGISTRY):latest \
+        -t $(REGISTRY):$(TAG) \
+        -f Dockerfile . --push
