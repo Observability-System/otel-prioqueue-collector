@@ -29,12 +29,26 @@ exporters:
     verbosity: detailed                    # detailed | normal | basic
     sampling_initial: 5                    # Print first 5 items
     sampling_thereafter: 200               # Then every 200th
+  freshness:
+    tenant_attribute: "source.id"
+    initial_slos:
+      src1: "3s"
+      src2: "500ms"
+      src3: "1s"
 
 service:
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888
   extensions: [weightupdate]
 
   pipelines:
     metrics:                               # main pipeline (metrics)
       receivers: [otlp]
       processors: [weightedqueue, batch]
-      exporters: [debug]
+      exporters: [freshness, debug]

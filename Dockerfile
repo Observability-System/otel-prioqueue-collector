@@ -9,11 +9,13 @@ WORKDIR /app
 COPY weightupdateextension/ weightupdateextension/
 COPY weightedqueueprocessor/ weightedqueueprocessor/
 COPY prioqueue-collector/ prioqueue-collector/
+COPY freshnessexporter/ freshnessexporter/
 
 WORKDIR /app/prioqueue-collector
 
 # Install OCB
-RUN go install go.opentelemetry.io/collector/cmd/builder@latest
+# RUN go install go.opentelemetry.io/collector/cmd/builder@latest
+RUN go install go.opentelemetry.io/collector/cmd/builder@v0.142.0
 
 # Build
 RUN builder --config manifest.yaml

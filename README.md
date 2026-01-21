@@ -1,8 +1,9 @@
 # **Custom OpenTelemetry Collector**: **Weighted Queue Processor**
 
-<p align="center"> <a href="https://github.com/open-telemetry/opentelemetry-collector"> <img src="https://img.shields.io/badge/OpenTelemetry-Collector-black?style=flat-square" /> </a> <a href="#weightedqueueprocessor"> <img src="https://img.shields.io/badge/Processor-WeightedQueue-black?style=flat-square" /> </a> <a href="#weightupdateextension"> <img src="https://img.shields.io/badge/Extension-WeightUpdate-black?style=flat-square" /> </a> <a href="https://go.dev/dl/"> <img src="https://img.shields.io/badge/Go-1.25+-black?style=flat-square" /> </a> <a href="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/tag/v0.142.0"> <img src="https://img.shields.io/badge/OCB-v0.142.0-black?style=flat-square" /> </a> <img src="https://img.shields.io/badge/Feature-Stateful%20Processor-black?style=flat-square" /> <img src="https://img.shields.io/badge/Feature-Per--Source%20Queues-black?style=flat-square" /> <img src="https://img.shields.io/badge/Feature-Dynamic%20Weights-black?style=flat-square" /> <img src="https://img.shields.io/badge/API-HTTP%204500-black?style=flat-square" /> </p>
+<p align="center"> <a href="https://github.com/open-telemetry/opentelemetry-collector"> <img src="https://img.shields.io/badge/OpenTelemetry-Collector-black?style=flat-square" /> </a> <a href="#weightedqueueprocessor"> <img src="https://img.shields.io/badge/Processor-WeightedQueue-black?style=flat-square" /> </a> <a href="#freshnessexporter"><img src="https://img.shields.io/badge/Exporter-Freshness-black?style=flat-square" /></a> <a href="#weightupdateextension"> <img src="https://img.shields.io/badge/Extension-WeightUpdate-black?style=flat-square" /> </a> <a href="https://go.dev/dl/"> <img src="https://img.shields.io/badge/Go-1.25+-black?style=flat-square" /> </a> <a href="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/tag/v0.142.0"> <img src="https://img.shields.io/badge/OCB-v0.142.0-black?style=flat-square" /> </a> <img src="https://img.shields.io/badge/Feature-Stateful%20Processor-black?style=flat-square" /> <img src="https://img.shields.io/badge/Feature-Per--Source%20Queues-black?style=flat-square" /> <img src="https://img.shields.io/badge/Feature-Dynamic%20Weights-black?style=flat-square" /> <img src="https://img.shields.io/badge/API-HTTP%204500-black?style=flat-square" /> </p>
 
-This project provides a **custom OpenTelemetry Collector distribution** that introduces a **stateful**, **weighted, per-tenant queueing processor** for **metrics**, together with a lightweight **HTTP control extension**.
+This project provides a **custom OpenTelemetry Collector distribution** that introduces 
+a **stateful**, **weighted, per-tenant queueing processor** for **metrics**, a **freshness-aware metrics exporter**, together with a lightweight **HTTP control extension**.
 
 The purpose of this collector is to enable **priority-aware** and **SLO-driven telemetry forwarding** in **multi-tenant observability pipelines**, where multiple independent sources share a common collector and backend.
 
@@ -29,7 +30,12 @@ All metric batches sharing the same ``source.id`` value are treated as belonging
 
 This establishes:
 - **Isolation** between tenants via independent queues  
-- **Controlled sharing** of collector resources via weighted scheduling  
+- **Controlled sharing** of collector resources via weighted scheduling
+
+> **Terminology note**  
+> Throughout this README, the terms **tenant** and **source** are used interchangeably.  
+> A tenant corresponds to a logical telemetry source identified by a resource attribute
+> (default: ``source.id``), such as an edge site, operator, or application domain.
 
 ## **Key Components**
 ### **Weighted Queue Processor** (``weightedqueueprocessor``)   
@@ -45,14 +51,46 @@ A custom **metrics processor** that:
 
 The processor is implemented using **official OpenTelemetry Collector interfaces** and operates fully within standard collector semantics.
 
-### **Weight Update Extension** (``weightupdateextension``)
+### **Freshness Exporter** (``freshnessexporter``)
 
-A lightweight **HTTP extension** that exposes runtime control over tenant weights.
+A custom **metrics exporter** that monitors **telemetry freshness** (end-to-end latency) on a per-tenant basis.
+
+The exporter computes freshness for incoming metric batches in real time using an upstream-provided timestamp and evaluates **SLO compliance** before exposing aggregated results via the Collector’s internal telemetry endpoint.
+
+Key characteristics:
+
+- **Purpose**: Monitor how *fresh (timely)* metric batches are when they reach this collector stage
+- **Data source**: Uses the ``initial_timestamp`` resource attribute set by an upstream collector
+- **Freshness calculation**:  
+  ``freshness = now (UnixNano) − initial_timestamp``
+- **Granularity**: Per tenant / source (configurable resource attribute, default: ``source.id``)
+- **Thresholds**:
+  - Configurable **per tenant**
+  - **Runtime-updatable** via HTTP API
+  - Default fallback threshold: **5 seconds**
+- **SLO evaluation**:
+  - A batch is considered **good** if ``freshness ≤ threshold`` for its tenant
+- **Initial values**:
+  - Optional static configuration via ``initial_slos`` in exporter config
+- **Auto-registration**:
+  - New tenants automatically receive the default SLO when first observed
+- **Runtime control**:
+  - Reuses the existing ``weightupdateextension`` for SLO updates (default port ``4500``)
+
+This exporter enables **quantitative, per-tenant freshness monitoring**, making telemetry
+timeliness explicit and measurable.
+
+In distributed observability pipelines, late telemetry can be as harmful as missing data.
+By evaluating freshness at the collector boundary, the exporter allows freshness to be
+treated as a **first-class SLO signal**, suitable for monitoring, alerting, and adaptive control.
+
+### **Weight & SLO Update Extension** (``weightupdateextension``)
+
+A lightweight **HTTP extension** that exposes runtime control over **tenant weights** and **per-tenant freshness SLO thresholds**.
 
 It provides the following endpoints:
 
 - ``POST /update_weights``
-  Updates tenant weights dynamically using a JSON payload. Example request:  
   Updates tenant weights dynamically using a JSON payload, for example:  
   ```json
   {
@@ -73,6 +111,17 @@ Deletes a tenant queue (by tenant id) and rebalances scheduling state accordingl
 
 The extension shares state directly with the processor using **OpenTelemetry-supported patterns**, enabling safe and low-latency runtime updates.
 
+Additional endpoints for freshness SLO management:
+
+- ``POST /slo/update``  
+  Updates the freshness SLO threshold for a specific tenant.
+
+- ``GET /slo?source=<name>``  
+  Returns the currently configured freshness SLO threshold for a tenant.
+
+- ``GET /slo/all``  
+  Returns freshness SLO thresholds for all known tenants.
+
 ## **Configuration vs Runtime State**
 
 This collector uses a **static pipeline configuration** defined in ``config.yaml`` (receivers → processors → exporters). The pipeline graph and component wiring are fixed at startup.
@@ -81,6 +130,7 @@ The ``weightedqueueprocessor`` is intentionally **stateful** at runtime:
 
 - It maintains **in-memory per-tenant queues** (bounded buffers).
 - It maintains **runtime scheduling state** (tenant weights) that controls how queues are drained.
+- It maintains **runtime freshness SLO thresholds** used by the freshness exporter for per-tenant SLO evaluation.
 
 The HTTP API provided by ``weightupdateextension`` updates **runtime scheduling state only**. It does **not** modify the collector pipeline configuration, receiver/exporter settings, or processor ordering. 
 
@@ -169,6 +219,22 @@ These metrics enable:
 - **Adaptive control** — detect violations (e.g., high drops for a critical source) and trigger API weight updates in real-time.
 - **Overload experiments** — quantify how the system sheds load gracefully instead of failing.
 
+The freshness exporter exposes additional Prometheus-style counters:
+
+- ``otelcol_freshness_total_batches_total{source="..."}``  
+  Total number of metric batches observed per tenant.
+
+- ``otelcol_freshness_good_batches_total{source="..."}``  
+  Number of metric batches whose freshness is within the configured SLO threshold.
+
+These metrics enable:
+- **Freshness SLO monitoring** — quantify how often telemetry meets timeliness requirements
+- **Per-tenant SLO compliance analysis**
+- **Closed-loop control** — adjust weights or SLOs in response to observed violations
+- **Research experiments** — study the interaction between queueing, prioritization, and freshness under load
+
+Observed freshness violations can be used to trigger runtime SLO or weight updates via the HTTP API, enabling adaptive behavior without restarting the collector.
+
 ## Flow Diagram
 The following diagram illustrates the runtime flow of metric batches through the collector and the interaction between the processor and the control extension:
 
@@ -186,10 +252,10 @@ flowchart TD
         H --> I[Weighted Random Select]
         I --> J[Forward Batch to Next]
         J --> K[Batch Processor]
-        K --> L[Exporter / Debug]
+        K --> L[Freshness Exporter / Other Exporters]
     end
     
-    M[WeightUpdate Extension]
+    M[Weight & SLO Update Extension]
     M -->|POST /update_weights| N[Update Weights + Rebalance]
     M -->|POST /delete_source| O[Delete Source + Rebalance]
     N -->|Shared State| C
@@ -210,28 +276,34 @@ This component is designed for:
 ```
 otel-prioqueue-collector/
 ├── prioqueue-collector/
-│   ├── manifest.yaml                # OCB manifest: defines modules, versions, and build output
-│   └── config.yaml                  # Collector runtime config (receivers, processors, exporters)
+│   ├── manifest.yaml                 # OCB manifest: defines modules, versions, and build output
+│   └── config.yaml                   # Collector runtime config (receivers, processors, exporters)
 │
-├── weightupdateextension/           # Custom OTEL extension: exposes HTTP API for weight updates
-│   ├── config.go                    # Extension configuration schema
-│   ├── extension.go                 # HTTP server + handlers
-│   ├── factory.go                   # OTEL factory registration
-│   ├── shared.go                    # Shared state (weights, source count)
+├── weightupdateextension/            # Custom OTEL extension: exposes HTTP API for weight + SLO updates
+│   ├── config.go                     # Extension configuration schema
+│   ├── extension.go                  # HTTP server + request handlers (/update_weights, /slo/*, etc.)
+│   ├── factory.go                    # OTEL factory registration
+│   ├── shared.go                     # Shared runtime state (weights, sources, SLO thresholds)
 │   └── go.mod
 │
-├── weightedqueueprocessor/          # Custom OTEL processor: weighted per-source queueing
-│   ├── config.go                    # Processor configuration schema
-│   ├── processor.go                 # Core queueing + weighted selection logic
-│   ├── factory.go                   # OTEL factory registration
+├── weightedqueueprocessor/           # Custom OTEL processor: weighted per-source queueing
+│   ├── config.go                     # Processor configuration schema
+│   ├── processor.go                  # Queueing + weighted dequeue logic + capacity enforcement
+│   ├── factory.go                    # OTEL factory registration
 │   └── go.mod
 │
-├── test-telemetry.py                # Optional helper script for generating synthetic metrics
-├── requirements.txt                 # Python dependencies for the test telemetry script
+├── freshnessexporter/                # Custom OTEL exporter: freshness evaluation + SLO compliance metrics
+│   ├── config.go                     # Exporter config (tenant attribute, initial_slos, defaults)
+│   ├── exporter.go                   # Freshness calculation + "good/total" counters emission
+│   ├── factory.go                    # OTEL factory registration and wiring into the pipeline
+│   ├── go.mod                        # Go module definition for the exporter component
 │
-├── Makefile                         # Build, release, multi-arch Docker, and tooling commands
+├── test-telemetry.py                 # Optional helper script for generating synthetic metrics
+├── requirements.txt                  # Python dependencies for the test telemetry script
+│
+├── Makefile                          # Build, release, multi-arch Docker, and tooling commands
 ├── Dockerfile
-└── README.md                        # Documentation for building and running the custom collector
+└── README.md                         # Documentation for building and running the custom collector
 ```
 
 ## Prerequisites
@@ -336,6 +408,9 @@ The `weightupdateextension` exposes a lightweight HTTP control‑plane for manag
 | `/update_weights`   | POST   | Updates tenant weights using a JSON payload. Weights should sum to ~1.0 |
 | `/weights`          | GET    | Returns the current weight map and number of sources.                   |
 | `/delete_source`    | POST   | Removes a source and rebalances remaining weights equally.              |
+| `/slo/update`        | POST   | Updates freshness SLO threshold for a specific source (single or bulk)      |
+| `/slo`               | GET    | Returns current freshness SLO threshold for a specific source (`?source=...`) |
+| `/slo/all`           | GET    | Returns current freshness SLO thresholds for **all** sources                |
 
 #### Examples
 ##### Update Weights
@@ -375,6 +450,30 @@ curl -X POST http://localhost:4500/delete_source \
   -d '{"source": "src1"}'
 ```
 
+##### Update SLO for one source
+```bash
+curl -X POST http://localhost:4500/slo/update \
+  -H "Content-Type: application/json" \
+  -d '{"source":"src1", "threshold": 3, "unit": "s"}'
+  ```
+
+##### Bulk update
+```bash
+curl -X POST http://localhost:4500/slo/update \
+  -H "Content-Type: application/json" \
+  -d '{
+    "updates": [
+      {"source":"src1", "threshold": 2, "unit": "s"},
+      {"source":"src2", "threshold": 800, "unit": "ms"}
+    ]
+  }'
+```
+
+##### Get all SLOs
+```bash
+curl http://localhost:4500/slo/all
+```
+
 ### **Accessing Internal Metrics**
 Internal Collector metrics are exposed on port `8888`. You can view these metrics directly or configure Prometheus to scrape them.
 
@@ -403,13 +502,15 @@ Internal Collector metrics are exposed on port `8888`. You can view these metric
   Replace `<collector-host>` with the appropriate Service name or pod IP for your environment.
 
 ## Customization
-| Setting            | Path in `config.yaml`                                         | Description                                   |
-|--------------------|-------------------------------------------------------------|-----------------------------------------------|
-| API Port           | `extensions.weightupdate.port`                              | Default: `4500`                               |
-| Source Attribute   | `processors.weightedqueue.source_attribute`                 | Default: `source.id`                          |
-| Initial Weights    | `processors.weightedqueue.initial_weights`                  | Optional initial map                          |
-| Max Total Capacity | `processors.weightedqueue.max_total_capacity`               | Global capacity split equally across tenants  |
-| Poll Interval      | `processors.weightedqueue.poll_interval_ms`                 | Dequeue frequency                             |
+| Setting                       | Path in `config.yaml`                                   | Description                                                                                     |
+|-------------------------------|-----------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| **API Port**                  | `extensions.weightupdate.port`                           | Port where the weight‑update API listens. Default: `4500`.                                      |
+| **Source Attribute**          | `processors.weightedqueue.source_attribute`              | Resource attribute used to identify the source/tenant. Default: `source.id`.                    |
+| **Initial Weights**           | `processors.weightedqueue.initial_weights`               | Optional map defining starting weights per tenant.                                              |
+| **Max Total Capacity**        | `processors.weightedqueue.max_total_capacity`            | Total queue capacity, automatically divided across tenants.                                     |
+| **Poll Interval**             | `processors.weightedqueue.poll_interval_ms`              | How frequently the processor dequeues items (in milliseconds).                                  |
+| **Tenant Attribute (Exporter)** | `exporters.freshness.tenant_attribute`                 | Resource attribute used to group metrics by tenant for freshness SLOs. Default: `source.id`.    |
+| **Initial SLOs**              | `exporters.freshness.initial_slos`                       | Optional map of initial freshness SLO thresholds per tenant (duration strings like `"3s"`).     |
 
 ## Upstream Considerations
 

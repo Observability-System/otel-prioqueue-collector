@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 
@@ -30,6 +31,9 @@ func (e *extensionImpl) Start(ctx context.Context, _ component.Host) error {
 	mux.HandleFunc("/update_weights", e.handleUpdateWeights)
 	mux.HandleFunc("/weights", e.handleGetWeights)
 	mux.HandleFunc("/delete_source", e.handleDeleteSource)
+	mux.HandleFunc("/slo/update", e.handleUpdateSLO)
+	mux.HandleFunc("/slo", e.handleGetSLO)
+	mux.HandleFunc("/slo/all", e.handleGetAllSLOs)
 
 	e.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", e.config.Port),
@@ -139,4 +143,125 @@ func (e *extensionImpl) handleDeleteSource(w http.ResponseWriter, r *http.Reques
 
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintln(w, "Source deleted and weights rebalanced")
+}
+
+func (e *extensionImpl) handleUpdateSLO(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var single struct {
+		Source    string `json:"source"`
+		Threshold int64  `json:"threshold"`
+		Unit      string `json:"unit"`
+	}
+
+	var bulk struct {
+		Updates []struct {
+			Source    string `json:"source"`
+			Threshold int64  `json:"threshold"`
+			Unit      string `json:"unit"`
+		} `json:"updates"`
+	}
+
+	// Try bulk first
+	if err := json.NewDecoder(r.Body).Decode(&bulk); err == nil && len(bulk.Updates) > 0 {
+		var successCount, failCount int
+		for _, u := range bulk.Updates {
+			if u.Source == "" || u.Threshold <= 0 {
+				failCount++
+				continue
+			}
+			if err := SetSLOThresholdForTenant(u.Source, u.Threshold, u.Unit); err != nil {
+				e.logger.Warn("Bulk SLO update failed for source", zap.String("source", u.Source), zap.Error(err))
+				failCount++
+				continue
+			}
+			successCount++
+		}
+
+		msg := fmt.Sprintf("Bulk update: %d successful, %d failed", successCount, failCount)
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, msg)
+		return
+	}
+
+	// Fallback to single update
+	r.Body = io.NopCloser(r.Body) // rewind for second decode
+	if err := json.NewDecoder(r.Body).Decode(&single); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if single.Source == "" || single.Threshold <= 0 {
+		http.Error(w, "Missing/invalid source or threshold", http.StatusBadRequest)
+		return
+	}
+
+	if err := SetSLOThresholdForTenant(single.Source, single.Threshold, single.Unit); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "SLO threshold updated for source %s\n", single.Source)
+}
+
+func (e *extensionImpl) handleGetSLO(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	source := r.URL.Query().Get("source")
+	if source == "" {
+		http.Error(w, "Missing ?source= parameter", http.StatusBadRequest)
+		return
+	}
+
+	ns := GetSLOThresholdForTenant(source)
+	seconds := float64(ns) / 1_000_000_000.0
+
+	resp := struct {
+		Source    string  `json:"source"`
+		Threshold float64 `json:"threshold_seconds"`
+		Unit      string  `json:"unit"`
+	}{
+		Source:    source,
+		Threshold: seconds,
+		Unit:      "s",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (e *extensionImpl) handleGetAllSLOs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	GlobalSLOs.RLock()
+	defer GlobalSLOs.RUnlock()
+
+	resp := make(map[string]struct {
+		ThresholdSeconds float64 `json:"threshold_seconds"`
+		Unit             string  `json:"unit"`
+	})
+
+	for source, ns := range GlobalSLOs.Thresholds {
+		seconds := float64(ns) / 1_000_000_000.0
+		resp[source] = struct {
+			ThresholdSeconds float64 `json:"threshold_seconds"`
+			Unit             string  `json:"unit"`
+		}{
+			ThresholdSeconds: seconds,
+			Unit:             "s",
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }

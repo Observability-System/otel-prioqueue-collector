@@ -46,8 +46,9 @@ try:
     while True:
         for source, counter in counters.items():
             value = random.randint(1, 50)
-            counter.add(value)  # No extra attributes needed (source.id is on resource)
-            print(f"Sent {value} requests for {source}")
+            timestamp_ns = int(time.time() * 1e9)
+            counter.add(value, attributes={"initial_timestamp": timestamp_ns})  # No extra attributes needed (source.id is on resource)
+            print(f"Sent {value} requests for {source} at {timestamp_ns}")
         
         time.sleep(GENERATION_INTERVAL_SECONDS)
 except KeyboardInterrupt:
