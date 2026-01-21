@@ -406,12 +406,12 @@ The `weightupdateextension` exposes a lightweight HTTP control‑plane for manag
 #### Endpoints
 | Endpoint            | Method | Description                                                             |
 |---------------------|--------|-------------------------------------------------------------------------|
-| `/update_weights`   | POST   | Updates tenant weights using a JSON payload. Weights should sum to ~1.0 |
+| `/update_weights`   | POST   | Updates tenant weights using a JSON payload. Weights should sum to `~1`.0 |
 | `/weights`          | GET    | Returns the current weight map and number of sources.                   |
 | `/delete_source`    | POST   | Removes a source and rebalances remaining weights equally.              |
-| `/slo/update`        | POST   | Updates freshness SLO threshold for a specific source (single or bulk)      |
-| `/slo`               | GET    | Returns current freshness SLO threshold for a specific source (`?source=...`) |
-| `/slo/all`           | GET    | Returns current freshness SLO thresholds for **all** sources                |
+| `/slo/update`        | POST   | Updates freshness SLO threshold for sources      |
+| `/slo`               | GET    | Returns current freshness SLO threshold for a specific source |
+| `/slo/all`           | GET    | Returns current freshness SLO thresholds for all sources                |
 
 #### Examples
 ##### Update Weights
@@ -510,7 +510,7 @@ Internal Collector metrics are exposed on port `8888`. You can view these metric
 | **Initial Weights**           | `processors.weightedqueue.initial_weights`               | Optional map defining starting weights per tenant.                                              |
 | **Max Total Capacity**        | `processors.weightedqueue.max_total_capacity`            | Total queue capacity, automatically divided across tenants.                                     |
 | **Poll Interval**             | `processors.weightedqueue.poll_interval_ms`              | How frequently the processor dequeues items (in milliseconds).                                  |
-| **Tenant Attribute (Exporter)** | `exporters.freshness.tenant_attribute`                 | Resource attribute used to group metrics by tenant for freshness SLOs. Default: `source.id`.    |
+| **Source Attribute (Exporter)** | `exporters.freshness.tenant_attribute`                 | Resource attribute used to group metrics by tenant for freshness SLOs. Default: `source.id`.    |
 | **Initial SLOs**              | `exporters.freshness.initial_slos`                       | Optional map of initial freshness SLO thresholds per tenant (duration strings like `"3s"`).     |
 
 ## Upstream Considerations
