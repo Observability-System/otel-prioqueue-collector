@@ -52,14 +52,14 @@ func (e *freshnessExporter) start(ctx context.Context, host component.Host) erro
 		duration, err := time.ParseDuration(durationStr)
 		if err != nil {
 			e.logger.Warn("Failed to parse initial SLO duration from config",
-				zap.String("tenant", tenant),
+				zap.String("source", tenant),
 				zap.String("duration", durationStr),
 				zap.Error(err))
 			continue
 		}
 		if err := weightupdateextension.SetSLOThresholdForTenant(tenant, duration.Nanoseconds(), "ns"); err != nil {
 			e.logger.Warn("Failed to apply initial SLO from config",
-				zap.String("tenant", tenant),
+				zap.String("source", tenant),
 				zap.String("duration", durationStr),
 				zap.Error(err))
 			continue
@@ -70,7 +70,7 @@ func (e *freshnessExporter) start(ctx context.Context, host component.Host) erro
 	}
 
 	e.logger.Info("Freshness exporter started",
-		zap.String("tenant_attribute", e.cfg.TenantAttribute))
+		zap.String("source_attribute", e.cfg.SourceAttribute))
 
 	return nil
 }
@@ -83,11 +83,11 @@ func (e *freshnessExporter) consume(ctx context.Context, md pmetric.Metrics) err
 		rm := rms.At(i)
 		resAttrs := rm.Resource().Attributes()
 
-		tenantVal, tenantOk := resAttrs.Get(e.cfg.TenantAttribute)
-		if !tenantOk || tenantVal.Str() == "" {
+		sourceVal, sourceOk := resAttrs.Get(e.cfg.SourceAttribute)
+		if !sourceOk || sourceVal.Str() == "" {
 			continue
 		}
-		tenant := tenantVal.Str()
+		source := sourceVal.Str()
 
 		var initialTs int64
 		found := false
@@ -111,21 +111,21 @@ func (e *freshnessExporter) consume(ctx context.Context, md pmetric.Metrics) err
 
 		if !found {
 			e.logger.Debug("Skipping batch: no initial_timestamp found",
-				zap.String("tenant", tenant))
+				zap.String("source", source))
 			continue
 		}
 
 		freshnessNs := now - initialTs
 
 		// Per-tenant SLO from shared state (runtime-updatable)
-		threshold := weightupdateextension.GetSLOThresholdForTenant(tenant)
+		threshold := weightupdateextension.GetSLOThresholdForTenant(source)
 
-		tenantAttr := attribute.String("source", tenant)
+		sourceAttr := attribute.String("source", source)
 
-		e.totalCounter.Add(ctx, 1, metric.WithAttributes(tenantAttr))
+		e.totalCounter.Add(ctx, 1, metric.WithAttributes(sourceAttr))
 
 		if freshnessNs <= threshold && freshnessNs >= 0 {
-			e.goodCounter.Add(ctx, 1, metric.WithAttributes(tenantAttr))
+			e.goodCounter.Add(ctx, 1, metric.WithAttributes(sourceAttr))
 		}
 	}
 

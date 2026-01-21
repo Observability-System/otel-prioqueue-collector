@@ -30,7 +30,7 @@ exporters:
     sampling_initial: 5                    # Print first 5 items
     sampling_thereafter: 200               # Then every 200th
   freshness:
-    tenant_attribute: "source.id"
+    source_attribute: "source.id"
     initial_slos:
       src1: "3s"
       src2: "500ms"
