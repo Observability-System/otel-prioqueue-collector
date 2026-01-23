@@ -76,7 +76,7 @@ func createMetricsProcessor(
 	queueLength, err := meter.Int64ObservableGauge(
 		"weightedqueue_queue_length",
 		metric.WithDescription("Current queue length per source"),
-		metric.WithUnit("1"),
+		metric.WithUnit("{batches}"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create queue length gauge: %w", err)
