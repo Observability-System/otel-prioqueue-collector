@@ -5,7 +5,8 @@ RESET  := \033[0m
 
 COLLECTOR_DIR := ./prioqueue-collector
 BIN_NAME      := prioqueue-collector
-BIN_OUT       := $(COLLECTOR_DIR)/build/$(BIN_NAME)
+BIN_ARCH      := darwin-arm64
+BIN_OUT       := $(COLLECTOR_DIR)/build/$(BIN_NAME)-$(BIN_ARCH)
 
 IMAGE_NAME    := prioqueue-collector
 REGISTRY      := ghcr.io/observability-system/otel-prioqueue-collector
@@ -29,6 +30,7 @@ help:
 .PHONY: build-bin
 build-bin:
 	@cd $(COLLECTOR_DIR) && builder --config manifest.yaml
+	@mv $(COLLECTOR_DIR)/build/$(BIN_NAME) $(BIN_OUT)
 	@echo "$(GREEN)Binary built at $(YELLOW)$(BIN_OUT)$(RESET)"
 
 .PHONY: checksum
