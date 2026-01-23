@@ -222,10 +222,10 @@ These metrics enable:
 
 The freshness exporter exposes additional Prometheus-style counters:
 
-- ``otelcol_freshness_total_batches_total{source="..."}`` (counter)  
+- ``freshness_total_batches_total{source="..."}`` (counter)  
   Total number of metric batches observed per tenant.
 
-- ``otelcol_freshness_good_batches_total{source="..."}`` (counter)  
+- ``freshness_good_batches_total{source="..."}`` (counter)  
   Number of metric batches whose freshness is within the configured SLO threshold.
 
 These metrics enable:
