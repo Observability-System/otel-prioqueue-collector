@@ -210,7 +210,7 @@ The processor exposes Prometheus-style metrics, including:
 - ``weightedqueue_queue_length{source="..."}`` (gauge)  
   Current queue length per tenant. High values indicate backlog/starvation risk for that source.
 
-- ``weightedqueue_dropped_batches{source="..."}`` (counter)  
+- ``weightedqueue_dropped_batches_total{source="..."}`` (counter)  
   Cumulative number of dropped metric batches per tenant due to capacity limits. A non-zero value signals actual data loss.
 
 These metrics enable:
