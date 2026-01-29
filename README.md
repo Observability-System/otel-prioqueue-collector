@@ -406,7 +406,7 @@ The `weightupdateextension` exposes a lightweight HTTP control‑plane for manag
 #### Endpoints
 | Endpoint            | Method | Description                                                             |
 |---------------------|--------|-------------------------------------------------------------------------|
-| `/update_weights`   | POST   | Updates tenant weights using a JSON payload. Weights should sum to `~1`.0 |
+| `/update_weights`   | POST   | Updates tenant weights using a JSON payload. Weights should sum to `~1.0` |
 | `/weights`          | GET    | Returns the current weight map and number of sources.                   |
 | `/delete_source`    | POST   | Removes a source and rebalances remaining weights equally.              |
 | `/slo/update`        | POST   | Updates freshness SLO threshold for sources      |
